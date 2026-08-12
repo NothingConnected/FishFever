@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Fish Fever — Underwater Treasure Hunt</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#03152d;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:white}
+body{touch-action:none}
+#game{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:none}
+#ui{position:fixed;inset:0;pointer-events:none}
+.panel{
+  background:linear-gradient(135deg,rgba(9,35,67,.78),rgba(3,20,43,.58));
+  border:1px solid rgba(130,225,255,.2);
+  box-shadow:0 12px 40px rgba(0,0,0,.25),inset 0 1px rgba(255,255,255,.08);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border-radius:18px
+}
+#hud{
+  position:absolute;top:18px;left:18px;right:18px;
+  display:flex;justify-content:space-between;align-items:flex-start
+}
+.statbox{padding:12px 18px;min-width:145px}
+.stat-label{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#7edcff;font-weight:800}
+.score{font-size:25px;font-weight:900;margin-top:2px}
+#rightHud{display:flex;gap:10px;align-items:flex-start}
+#lives{font-size:19px;letter-spacing:4px}
+#combo{
+  position:absolute;top:105px;left:50%;transform:translateX(-50%) scale(.8);
+  opacity:0;font-size:24px;font-weight:1000;font-style:italic;
+  text-shadow:0 0 20px #00eaff,2px 3px 0 rgba(0,0,0,.25);
+  transition:.18s ease
+}
+#combo.show{opacity:1;transform:translateX(-50%) scale(1)}
+#zone{
+  position:absolute;bottom:20px;left:20px;padding:9px 15px;
+  color:#b7edff;font-size:12px;font-weight:800;letter-spacing:1.5px
+}
+#xpWrap{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);width:min(390px,48vw)}
+.xp-text{display:flex;justify-content:space-between;font-size:11px;font-weight:800;color:#a8eaff;margin-bottom:5px}
+.bar{height:7px;background:rgba(0,0,0,.35);border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+#xp{height:100%;width:0;background:linear-gradient(90deg,#00d9ff,#72ffdd);box-shadow:0 0 14px #00d9ff;transition:width .25s}
+#dash{
+  position:absolute;right:20px;bottom:20px;width:145px;padding:11px 14px;
+  pointer-events:auto;cursor:pointer;text-align:center
+}
+#dash strong{display:block;font-size:12px;letter-spacing:1px}
+#dash small{color:#80dfff;font-size:10px}
+#dash .bar{margin-top:7px;height:5px}
+#dashFill{width:100%;height:100%;background:#53e8ff;transition:.1s}
+.iconButtons{display:flex;gap:8px}
+.iconBtn{
+  pointer-events:auto;cursor:pointer;width:42px;height:42px;border-radius:13px;
+  border:1px solid rgba(255,255,255,.15);color:white;background:rgba(4,25,49,.65);
+  font-size:17px;transition:.2s
+}
+.iconBtn:hover{background:rgba(30,100,140,.75);transform:translateY(-2px)}
+#overlay{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 45%,rgba(9,77,119,.18),rgba(1,10,27,.72));
+  z-index:10;transition:.4s
+}
+#overlay.hidden{opacity:0;pointer-events:none}
+.menu{
+  width:min(620px,92vw);padding:42px;text-align:center;
+  background:linear-gradient(145deg,rgba(7,35,66,.9),rgba(3,17,38,.88));
+  border:1px solid rgba(102,225,255,.25);border-radius:30px;
+  box-shadow:0 30px 100px rgba(0,0,0,.55),0 0 80px rgba(0,175,255,.08);
+  backdrop-filter:blur(18px)
+}
+.logo{
+  font-size:clamp(42px,8vw,78px);line-height:.9;font-weight:1000;
+  letter-spacing:-4px;
+  background:linear-gradient(135deg,#fff,#68edff 45%,#42a8ff);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 25px rgba(0,220,255,.25))
+}
+.subtitle{margin:16px 0 28px;color:#9bd8ea;font-size:15px;line-height:1.6}
+.play{
+  border:0;color:#02213a;font-weight:1000;font-size:16px;letter-spacing:1px;
+  padding:15px 35px;border-radius:50px;cursor:pointer;
+  background:linear-gradient(135deg,#61f5ff,#72ffc4);
+  box-shadow:0 0 30px rgba(66,238,255,.28),inset 0 2px white;
+  transition:.2s
+}
+.play:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 0 45px rgba(66,238,255,.45)}
+.controls{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:25px}
+.control{padding:12px 6px;background:rgba(255,255,255,.04);border-radius:13px;color:#8bcfe1;font-size:11px}
+.control b{display:block;color:white;margin-bottom:3px}
+#message{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%) scale(.7);opacity:0;pointer-events:none;text-align:center;transition:.25s;z-index:5}
+#message.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#message h2{font-size:clamp(35px,7vw,70px);font-weight:1000;font-style:italic;text-shadow:0 4px 0 rgba(0,0,0,.15),0 0 35px #00eaff}
+#message p{color:#b8edff;font-weight:800}
+#settings{
+  position:fixed;right:18px;top:70px;width:230px;padding:18px;z-index:20;
+  display:none;pointer-events:auto
+}
+#settings.open{display:block}
+.setting{display:flex;justify-content:space-between;align-items:center;padding:9px 0;color:#bceafa;font-size:12px}
+.toggle{width:40px;height:22px;border-radius:20px;background:#16415d;cursor:pointer;position:relative}
+.toggle:after{content:"";position:absolute;width:16px;height:16px;top:3px;left:3px;border-radius:50%;background:#7edfff;transition:.2s}
+.toggle.on{background:#087c86}.toggle.on:after{left:21px;background:#72ffcf}
+#skinSelect{
+  width:100%;margin-top:10px;background:#082b4a;color:white;border:1px solid #1a617c;
+  border-radius:9px;padding:8px
+}
+@media(max-width:650px){
+  #hud{top:10px;left:10px;right:10px}
+  .statbox{min-width:100px;padding:9px 12px}.score{font-size:19px}
+  #rightHud{gap:5px}.iconBtn{width:37px;height:37px}
+  #xpWrap{width:42vw;bottom:15px}.statbox:nth-child(2){display:none}
+  #zone{bottom:15px;left:10px}.zoneFull{display:none}
+  #dash{right:10px;bottom:65px;width:125px}
+  .menu{padding:30px 20px}.controls{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="ui">
+  <div id="hud">
+    <div class="panel statbox">
+      <div class="stat-label">Score</div>
+      <div class="score" id="score">0</div>
+    </div>
+
+    <div id="rightHud">
+      <div class="panel statbox">
+        <div class="stat-label">Best</div>
+        <div class="score" id="best">0</div>
+      </div>
+      <div class="panel statbox">
+        <div class="stat-label">Lives</div>
+        <div class="score" id="lives">🐟 🐟 🐟</div>
+      </div>
+      <div class="iconButtons">
+        <button class="iconBtn" id="pauseBtn" title="Pause">Ⅱ</button>
+        <button class="iconBtn" id="soundBtn" title="Sound">♪</button>
+        <button class="iconBtn" id="settingsBtn" title="Settings">⚙</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="combo">FISH FEVER ×2!</div>
+
+  <div class="panel" id="zone">🌊 <span id="zoneName">TROPICAL REEF</span></div>
+
+  <div id="xpWrap">
+    <div class="xp-text"><span>LEVEL <b id="level">1</b></span><span id="xpText">0 / 100 XP</span></div>
+    <div class="bar"><div id="xp"></div></div>
+  </div>
+
+  <div class="panel" id="dash">
+    <strong>⚡ FISH DASH</strong>
+    <small id="dashText">SPACE / TAP</small>
+    <div class="bar"><div id="dashFill"></div></div>
+  </div>
+
+  <div id="message">
+    <h2 id="messageTitle">NICE!</h2>
+    <p id="messageSub">Treasure collected</p>
+  </div>
+</div>
+
+<div id="settings" class="panel">
+  <div style="font-weight:900;margin-bottom:8px">SETTINGS</div>
+  <div class="setting">Sound <div class="toggle on" id="soundToggle"></div></div>
+  <div class="setting">Particles <div class="toggle on" id="particleToggle"></div></div>
+  <div class="setting">Night Mode <div class="toggle" id="nightToggle"></div></div>
+  <select id="skinSelect">
+    <option value="sunset">Sunset Fish</option>
+    <option value="ocean">Ocean Fish</option>
+    <option value="gold">Golden Fish</option>
+    <option value="neon">Neon Fish</option>
+  </select>
+</div>
+
+<div id="overlay">
+  <div class="menu">
+    <div class="logo">FISH<br>FEVER</div>
+    <div class="subtitle">
+      Dive into a living underwater world.<br>
+      Chase your cursor, collect treasure, dodge danger,<br>
+      and become the fastest fish in the reef.
+    </div>
+    <button class="play" id="playBtn">🐠 START ADVENTURE</button>
+    <div class="controls">
+      <div class="control"><b>🖱 MOVE</b>Guide your fish</div>
+      <div class="control"><b>⚡ SPACE</b>Fish Dash</div>
+      <div class="control"><b>🖱 CLICK</b>Attract fish</div>
+    </div>
+    <div style="margin-top:20px;font-size:11px;color:#5793aa">
+      High Score: <b id="menuBest">0</b>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   FISH FEVER
+   Single-file Canvas game
+   ========================================================= */
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let W=innerWidth,H=innerHeight,DPR=Math.min(devicePixelRatio||1,2);
+let running=false,paused=false,gameOver=false;
+let last=performance.now(),time=0;
+
+function resize(){
+  W=innerWidth; H=innerHeight;
+  DPR=Math.min(devicePixelRatio||1,2);
+  canvas.width=W*DPR;
+  canvas.height=H*DPR;
+  canvas.style.width=W+"px";
+  canvas.style.height=H+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+addEventListener("resize",resize);
+resize();
+
+/* ---------------------------
+   Utilities
+--------------------------- */
+
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const rand=(a,b)=>a+Math.random()*(b-a);
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+
+function angleDiff(a,b){
+  return Math.atan2(Math.sin(b-a),Math.cos(b-a));
+}
+
+function approachAngle(a,b,amount){
+  return a+clamp(angleDiff(a,b),-amount,amount);
+}
+
+/* ---------------------------
+   Audio
+--------------------------- */
+
+let audioCtx=null,sound=true;
+
+function initAudio(){
+  if(!sound)return;
+  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==="suspended")audioCtx.resume();
+}
+
+function beep(freq=440,duration=.08,type="sine",volume=.035){
+  if(!sound)return;
+  initAudio();
+  const o=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  o.type=type;o.frequency.value=freq;
+  g.gain.setValueAtTime(volume,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start();o.stop(audioCtx.currentTime+duration);
+}
+
+function collectSound(){
+  beep(620,.06,"sine",.045);
+  setTimeout(()=>beep(900,.09,"sine",.035),35);
+}
+
+function hitSound(){ beep(100,.18,"sawtooth",.035); }
+
+/* ---------------------------
+   Input
+--------------------------- */
+
+const target={
+  x:W*.5,y:H*.5,
+  prevX:W*.5,prevY:H*.5,
+  speed:0,
+  active:false,
+  pulse:0
+};
+
+function setTarget(x,y){
+  target.prevX=target.x;
+  target.prevY=target.y;
+  target.x=x;
+  target.y=y;
+  target.speed=Math.hypot(target.x-target.prevX,target.y-target.prevY);
+  target.active=true;
+  target.pulse=1;
+}
+
+addEventListener("mousemove",e=>setTarget(e.clientX,e.clientY));
+
+addEventListener("touchmove",e=>{
+  const t=e.touches[0];
+  if(t)setTarget(t.clientX,t.clientY);
+},{passive:false});
+
+canvas.addEventListener("click",e=>{
+  setTarget(e.clientX,e.clientY);
+  attractFish();
+  splash(e.clientX,e.clientY);
+});
+
+canvas.addEventListener("touchstart",e=>{
+  const t=e.touches[0];
+  if(t){
+    setTarget(t.clientX,t.clientY);
+    attractFish();
+    splash(t.clientX,t.clientY);
+  }
+},{passive:false});
+
+function attractFish(){
+  fish.attraction=1.4;
+  for(let i=0;i<8;i++)
+    particles.push(new Particle(fish.x,fish.y,"bubble"));
+  beep(340,.12,"triangle",.03);
+}
+
+/* ---------------------------
+   Fish
+--------------------------- */
+
+class Fish{
+  constructor(){
+    this.x=W*.5;
+    this.y=H*.55;
+    this.vx=0;
+    this.vy=0;
+    this.angle=0;
+    this.speed=0;
+    this.radius=29;
+    this.phase=Math.random()*Math.PI*2;
+    this.attraction=0;
+    this.dash=0;
+    this.dashCooldown=0;
+    this.invulnerable=0;
+    this.skin="sunset";
+  }
+
+  update(dt){
+    this.phase+=dt*(5+this.speed*.03);
+
+    const dx=target.x-this.x;
+    const dy=target.y-this.y;
+    const d=Math.hypot(dx,dy)||1;
+
+    /* Living creature offset */
+    const wanderX=Math.sin(time*.83+this.phase)*10;
+    const wanderY=Math.sin(time*1.37+this.phase*1.7)*7;
+
+    let desiredX=target.x+wanderX;
+    let desiredY=target.y+wanderY;
+
+    /* Fish sometimes overshoots the cursor slightly */
+    if(d>100){
+      desiredX+=Math.cos(this.angle)*Math.min(45,d*.12);
+      desiredY+=Math.sin(this.angle)*Math.min(45,d*.12);
+    }
+
+    /* Obstacle avoidance */
+    let avoidX=0,avoidY=0;
+    for(const o of obstacles){
+      const ox=this.x-o.x,oy=this.y-o.y;
+      const od=Math.hypot(ox,oy);
+      const danger=o.r+100;
+      if(od<danger){
+        const force=(1-od/danger)**2;
+        avoidX+=(ox/(od||1))*force*220;
+        avoidY+=(oy/(od||1))*force*220;
+      }
+    }
+
+    desiredX+=avoidX;
+    desiredY+=avoidY;
+
+    const desiredAngle=Math.atan2(desiredY-this.y,desiredX-this.x);
+    this.angle=approachAngle(this.angle,desiredAngle,dt*(2.5+this.speed*.01));
+
+    let wantedSpeed=clamp(d*.92,0,280);
+
+    if(d<65) wantedSpeed*=d/65;
+    if(this.attraction>0)wantedSpeed+=70*this.attraction;
+    if(this.dash>0)wantedSpeed=720;
+
+    const acceleration=this.dash>0?1300:650;
+    const desiredVX=Math.cos(this.angle)*wantedSpeed;
+    const desiredVY=Math.sin(this.angle)*wantedSpeed;
+
+    this.vx=lerp(this.vx,desiredVX,1-Math.exp(-acceleration*dt/Math.max(1,wantedSpeed+80)));
+    this.vy=lerp(this.vy,desiredVY,1-Math.exp(-acceleration*dt/Math.max(1,wantedSpeed+80)));
+
+    this.x+=this.vx*dt;
+    this.y+=this.vy*dt;
+
+    /* Keep the fish inside the aquarium */
+    const margin=65;
+    if(this.x<margin){this.vx+=100*dt;this.x=margin}
+    if(this.x>W-margin){this.vx-=100*dt;this.x=W-margin}
+    if(this.y<margin){this.vy+=100*dt;this.y=margin}
+    if(this.y>H-margin){this.vy-=100*dt;this.y=H-margin}
+
+    this.speed=Math.hypot(this.vx,this.vy);
+    this.attraction=Math.max(0,this.attraction-dt);
+    this.invulnerable=Math.max(0,this.invulnerable-dt);
+
+    if(this.dash>0){
+      this.dash-=dt;
+      if(Math.random()<.8)particles.push(new Particle(this.x,this.y,"dash"));
+    }
+
+    this.dashCooldown=Math.max(0,this.dashCooldown-dt);
+
+    /* Swimming bubbles */
+    if(this.speed>45 && Math.random()<dt*.7){
+      particles.push(new Particle(
+        this.x-Math.cos(this.angle)*35,
+        this.y-Math.sin(this.angle)*35,
+        "bubble"
+      ));
+    }
+
+    /* Dash trail */
+    if(this.dash>0 && Math.random()<dt*22){
+      particles.push(new Particle(this.x,this.y,"dash"));
+    }
+  }
+
+  dashNow(){
+    if(this.dashCooldown>0 || !running || paused)return;
+    this.dash=.52;
+    this.dashCooldown=3.2;
+    this.invulnerable=.65;
+    this.vx+=Math.cos(this.angle)*500;
+    this.vy+=Math.sin(this.angle)*500;
+
+    for(let i=0;i<25;i++)
+      particles.push(new Particle(this.x,this.y,"dash"));
+
+    beep(150,.12,"sawtooth",.035);
+    setTimeout(()=>beep(500,.18,"sine",.025),60);
+  }
+
+  draw(){
+    ctx.save();
+    ctx.translate(this.x,this.y);
+
+    /* subtle swimming bob */
+    const bob=Math.sin(this.phase*1.15)*2.5;
+    ctx.translate(0,bob);
+    ctx.rotate(this.angle);
+
+    const flap=Math.sin(this.phase*1.8)*(0.18+this.speed/1500);
+    const swim=Math.sin(this.phase*2.2);
+
+    if(this.invulnerable>0 && Math.floor(time*20)%2===0)
+      ctx.globalAlpha=.55;
+
+    /* Glow */
+    if(this.dash>0){
+      ctx.shadowColor="#58f7ff";
+      ctx.shadowBlur=35;
+    }
+
+    /* Tail */
+    ctx.save();
+    ctx.translate(-35,0);
+    ctx.rotate(flap);
+    const tailGrad=ctx.createLinearGradient(-25,0,12,0);
+    tailGrad.addColorStop(0,"#e84f72");
+    tailGrad.addColorStop(1,"#ff9c7a");
+    ctx.fillStyle=tailGrad;
+    ctx.beginPath();
+    ctx.moveTo(8,0);
+    ctx.quadraticCurveTo(-10,-24,-27,-21);
+    ctx.quadraticCurveTo(-20,0,-27,21);
+    ctx.quadraticCurveTo(-8,23,8,0);
+    ctx.fill();
+    ctx.restore();
+
+    /* Upper fin */
+    ctx.save();
+    ctx.translate(-2,-20);
+    ctx.rotate(-.25+flap*.5);
+    ctx.fillStyle="#f47789";
+    ctx.beginPath();
+    ctx.moveTo(-12,8);
+    ctx.quadraticCurveTo(0,-23,20,-28);
+    ctx.quadraticCurveTo(15,-7,4,10);
+    ctx.fill();
+    ctx.restore();
+
+    /* Bottom fin */
+    ctx.save();
+    ctx.translate(0,18);
+    ctx.rotate(.25-flap*.5);
+    ctx.fillStyle="#d95476";
+    ctx.beginPath();
+    ctx.moveTo(-10,-4);
+    ctx.quadraticCurveTo(5,20,23,24);
+    ctx.quadraticCurveTo(17,3,4,-7);
+    ctx.fill();
+    ctx.restore();
+
+    /* Body */
+    let colors={
+      sunset:["#ff637d","#ff9c69","#ffd06a"],
+      ocean:["#168fd0","#46d8ed","#b3f7ff"],
+      gold:["#d98b16","#ffd34d","#fff0a0"],
+      neon:["#9a43ff","#f34cff","#63fff2"]
+    }[this.skin]||["#ff637d","#ff9c69","#ffd06a"];
+
+    const g=ctx.createLinearGradient(-30,-20,40,20);
+    g.addColorStop(0,colors[0]);
+    g.addColorStop(.55,colors[1]);
+    g.addColorStop(1,colors[2]);
+
+    ctx.fillStyle=g;
+    ctx.beginPath();
+    ctx.ellipse(5,0,43,25,0,0,Math.PI*2);
+    ctx.fill();
+
+    /* Belly highlight */
+    const belly=ctx.createRadialGradient(17,7,2,17,7,30);
+    belly.addColorStop(0,"rgba(255,255,255,.65)");
+    belly.addColorStop(1,"rgba(255,255,255,0)");
+    ctx.fillStyle=belly;
+    ctx.beginPath();
+    ctx.ellipse(13,8,27,14,0,0,Math.PI*2);
+    ctx.fill();
+
+    /* Scales */
+    ctx.strokeStyle="rgba(255,255,255,.20)";
+    ctx.lineWidth=1;
+    for(let row=-1;row<=1;row++){
+      for(let col=-2;col<=2;col++){
+        const sx=-4+col*11+(row%2)*5;
+        const sy=row*9;
+        ctx.beginPath();
+        ctx.arc(sx,sy,5,.2,Math.PI-.2);
+        ctx.stroke();
+      }
+    }
+
+    /* Eye */
+    ctx.fillStyle="#fff";
+    ctx.beginPath();ctx.arc(32,-9,7,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#071426";
+    ctx.beginPath();ctx.arc(34,-9,3.2,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="white";
+    ctx.beginPath();ctx.arc(35,-10,1,0,Math.PI*2);ctx.fill();
+
+    /* Smile */
+    ctx.strokeStyle="rgba(80,30,45,.5)";
+    ctx.lineWidth=1.5;
+    ctx.beginPath();
+    ctx.arc(37,3,5,.1,1.2);
+    ctx.stroke();
+
+    /* Pectoral fin */
+    ctx.save();
+    ctx.translate(17,10);
+    ctx.rotate(.2+flap);
+    ctx.fillStyle="rgba(255,145,155,.72)";
+    ctx.beginPath();
+    ctx.ellipse(7,4,8,18,-.4,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.restore();
+  }
+}
+
+const fish=new Fish();
+
+/* ---------------------------
+   Collectibles
+--------------------------- */
+
+class Collectible{
+  constructor(){
+    this.type=Math.random()<.08?"gold":Math.random()<.45?"coin":Math.random()<.7?"pearl":"gem";
+    this.x=rand(70,W-70);
+    this.y=rand(100,H-100);
+    this.r=this.type==="gold"?17:13;
+    this.phase=Math.random()*Math.PI*2;
+    this.life=0;
+    this.spin=Math.random()*6;
+    this.value=this.type==="gold"?100:this.type==="gem"?35:this.type==="pearl"?20:10;
+  }
+
+  update(dt){
+    this.life+=dt;
+    this.phase+=dt*2;
+    this.y+=Math.sin(this.life*1.8+this.spin)*dt*4;
+    this.x+=Math.cos(this.life*1.1+this.spin)*dt*2;
+  }
+
+  draw(){
+    ctx.save();
+    ctx.translate(this.x,this.y+Math.sin(this.life*2+this.spin)*4);
+    const glow=this.type==="gold"?"#ffd83d":this.type==="gem"?"#d05cff":this.type==="pearl"?"#e9fbff":"#ffe46b";
+
+    ctx.shadowColor=glow;
+    ctx.shadowBlur=18+Math.sin(time*5)*4;
+
+    if(this.type==="coin"||this.type==="gold"){
+      ctx.rotate(this.life*1.5);
+      ctx.fillStyle=glow;
+      ctx.beginPath();ctx.arc(0,0,this.r,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.55)";
+      ctx.beginPath();ctx.arc(-4,-5,4,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.fillStyle="#996d00";
+      ctx.font="bold 14px system-ui";
+      ctx.textAlign="center";ctx.textBaseline="middle";
+      ctx.fillText(this.type==="gold"?"★":"$",0,1);
+    }else if(this.type==="pearl"){
+      const g=ctx.createRadialGradient(-4,-5,1,0,0,this.r);
+      g.addColorStop(0,"#fff");
+      g.addColorStop(.4,"#c9f5ff");
+      g.addColorStop(1,"#7593b7");
+      ctx.fillStyle=g;
+      ctx.beginPath();ctx.arc(0,0,this.r,0,Math.PI*2);ctx.fill();
+    }else{
+      ctx.fillStyle=glow;
+      ctx.beginPath();
+      ctx.moveTo(0,-17);ctx.lineTo(12,-2);ctx.lineTo(5,14);
+      ctx.lineTo(-9,10);ctx.lineTo(-13,-5);ctx.closePath();ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.45)";
+      ctx.beginPath();ctx.moveTo(-3,-10);ctx.lineTo(3,-5);ctx.lineTo(-1,0);ctx.closePath();ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+/* ---------------------------
+   Obstacles
+--------------------------- */
+
+class Obstacle{
+  constructor(){
+    this.type=Math.random()<.5?"jelly":"rock";
+    this.x=rand(80,W-80);
+    this.y=rand(120,H-100);
+    this.r=this.type==="jelly"?rand(20,30):rand(24,42);
+    this.phase=Math.random()*6;
+    this.vx=this.type==="jelly"?rand(-8,8):0;
+  }
+
+  update(dt){
+    this.phase+=dt;
+    this.x+=this.vx*dt;
+    if(this.x<60||this.x>W-60)this.vx*=-1;
+  }
+
+  draw(){
+    ctx.save();
+    ctx.translate(this.x,this.y);
+
+    if(this.type==="jelly"){
+      const pulse=1+Math.sin(this.phase*2.5)*.06;
+      ctx.scale(pulse,pulse);
+      ctx.shadowColor="#cb6cff";ctx.shadowBlur=18;
+      ctx.fillStyle="rgba(198,89,255,.68)";
+      ctx.beginPath();
+      ctx.arc(0,0,this.r,Math.PI,Math.PI*2);
+      ctx.lineTo(this.r,-2);
+      for(let i=0;i<4;i++){
+        const x=-this.r+i*this.r*2/3;
+        ctx.quadraticCurveTo(x+5,20+Math.sin(this.phase*4+i)*5,x+2,32);
+      }
+      ctx.fill();
+      ctx.fillStyle="rgba(255,190,255,.5)";
+      ctx.beginPath();ctx.arc(-8,-8,7,0,Math.PI*2);ctx.fill();
+    }else{
+      ctx.shadowColor="#163d4a";ctx.shadowBlur=10;
+      const g=ctx.createLinearGradient(-30,-30,30,30);
+      g.addColorStop(0,"#55777b");g.addColorStop(1,"#172f39");
+      ctx.fillStyle=g;
+      ctx.beginPath();
+      for(let i=0;i<8;i++){
+        const a=i*Math.PI/4;
+        const r=this.r*rand(.8,1.08);
+        const x=Math.cos(a)*r,y=Math.sin(a)*r;
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      }
+      ctx.closePath();ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.1)";
+      ctx.beginPath();ctx.arc(-9,-11,7,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+/* ---------------------------
+   Particles
+--------------------------- */
+
+const particles=[];
+
+class Particle{
+  constructor(x,y,type="bubble"){
+    this.x=x;this.y=y;this.type=type;
+    this.life=0;
+    this.max=rand(.45,1.3);
+    this.r=rand(2,6);
+    this.vx=rand(-30,30);
+    this.vy=rand(-70,-20);
+    this.alpha=1;
+    this.color=type==="dash"?"#5ff8ff":type==="spark"?"#ffe46b":"#8deaff";
+  }
+
+  update(dt){
+    this.life+=dt;
+    this.x+=this.vx*dt;
+    this.y+=this.vy*dt;
+    if(this.type==="bubble"){
+      this.vx+=Math.sin(this.life*5)*4*dt;
+      this.vy-=4*dt;
+    }
+    this.alpha=1-this.life/this.max;
+  }
+
+  draw(){
+    ctx.save();
+    ctx.globalAlpha=Math.max(0,this.alpha);
+    if(this.type==="bubble"){
+      ctx.strokeStyle=this.color;ctx.lineWidth=1.5;
+      ctx.shadowColor=this.color;ctx.shadowBlur=8;
+      ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle="rgba(255,255,255,.5)";
+      ctx.beginPath();ctx.arc(this.x-this.r*.3,this.y-this.r*.3,1.2,0,Math.PI*2);ctx.fill();
+    }else{
+      ctx.fillStyle=this.color;
+      ctx.shadowColor=this.color;ctx.shadowBlur=14;
+      ctx.beginPath();ctx.arc(this.x,this.y,this.r*(.4+this.alpha),0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+function splash(x,y){
+  for(let i=0;i<18;i++){
+    const p=new Particle(x,y,i%3?"bubble":"spark");
+    p.vx=rand(-130,130);p.vy=rand(-130,30);
+    particles.push(p);
+  }
+}
+
+/* ---------------------------
+   Background
+--------------------------- */
+
+const bgBubbles=[];
+const distantFish=[];
+
+for(let i=0;i<80;i++){
+  bgBubbles.push({
+    x:Math.random(),y:Math.random(),
+    r:rand(.5,3),speed:rand(4,18),
+    phase:Math.random()*6
+  });
+}
+
+for(let i=0;i<9;i++){
+  distantFish.push({
+    x:rand(-W,W),y:rand(100,H-100),
+    speed:rand(15,45),scale:rand(.4,.8),
+    phase:Math.random()*6
+  });
+}
+
+function drawBackground(){
+  const night=nightMode;
+
+  const g=ctx.createLinearGradient(0,0,0,H);
+  if(night){
+    g.addColorStop(0,"#020a20");
+    g.addColorStop(.5,"#031334");
+    g.addColorStop(1,"#010817");
+  }else{
+    g.addColorStop(0,"#0879a9");
+    g.addColorStop(.35,"#075481");
+    g.addColorStop(1,"#02152f");
+  }
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,W,H);
+
+  /* light from surface */
+  ctx.save();
+  ctx.globalAlpha=night?.08:.13;
+  ctx.globalCompositeOperation="screen";
+  for(let i=0;i<12;i++){
+    const x=(i/12)*W+Math.sin(time*.2+i)*50;
+    ctx.fillStyle="#7eefff";
+    ctx.beginPath();
+    ctx.moveTo(x-30,0);
+    ctx.lineTo(x+30,0);
+    ctx.lineTo(x+120,H*.72);
+    ctx.lineTo(x-90,H*.72);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+
+  /* distant fish */
+  ctx.save();
+  for(const f of distantFish){
+    f.x+=f.speed*(1+level*.02)*.016;
+    if(f.x>W+100)f.x=-100;
+    ctx.globalAlpha=.12;
+    ctx.fillStyle="#9befff";
+    ctx.translate(f.x,f.y+Math.sin(time+f.phase)*10);
+    ctx.scale(f.scale,f.scale);
+    ctx.beginPath();ctx.ellipse(0,0,25,10,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.moveTo(-20,0);ctx.lineTo(-40,-12);ctx.lineTo(-36,0);ctx.lineTo(-40,12);ctx.closePath();ctx.fill();
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  ctx.restore();
+
+  /* sand / seabed */
+  const sandY=H-70;
+  const sand=ctx.createLinearGradient(0,sandY,0,H);
+  sand.addColorStop(0,"rgba(15,89,91,.5)");
+  sand.addColorStop(1,"rgba(3,35,48,.8)");
+  ctx.fillStyle=sand;
+  ctx.fillRect(0,sandY,W,70);
+
+  /* seaweed */
+  ctx.save();
+  for(let x=-10;x<W+30;x+=28){
+    const h=rand(25,65);
+    ctx.strokeStyle=`rgba(34,150,111,${night?.25:.5})`;
+    ctx.lineWidth=5;
+    ctx.beginPath();
+    ctx.moveTo(x,H);
+    ctx.quadraticCurveTo(
+      x+Math.sin(time*.8+x*.02)*14,H-h*.5,
+      x+Math.sin(time+x*.03)*20,H-h
+    );
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  /* background bubbles */
+  for(const b of bgBubbles){
+    b.y-=b.speed*.016/H;
+    if(b.y<-.02){b.y=1.02;b.x=Math.random()}
+    const x=b.x*W;
+    const y=b.y*H;
+    ctx.strokeStyle=`rgba(170,235,255,${night?.18:.25})`;
+    ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(x,y,b.r,0,Math.PI*2);ctx.stroke();
+  }
+
+  /* vignette */
+  const v=ctx.createRadialGradient(W/2,H/2,H*.1,W/2,H/2,H*.75);
+  v.addColorStop(0,"transparent");
+  v.addColorStop(1,"rgba(0,5,20,.38)");
+  ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
+}
+
+/* ---------------------------
+   Game state
+--------------------------- */
+
+let collectibles=[];
+let obstacles=[];
+let score=0;
+let best=Number(localStorage.getItem("fishFeverBest")||0);
+let level=1;
+let xp=0;
+let combo=0;
+let comboTimer=0;
+let lives=3;
+let spawnTimer=0;
+let obstacleTimer=0;
+let messageTimer=0;
+let zoneIndex=0;
+let nightMode=false;
+let particlesEnabled=true;
+let skin=localStorage.getItem("fishSkin")||"sunset";
+
+document.getElementById("best").textContent=best;
+document.getElementById("menuBest").textContent=best;
+fish.skin=skin;
+document.getElementById("skinSelect").value=skin;
+
+const zones=[
+  {name:"TROPICAL REEF",color:"#18b5cf",at:1},
+  {name:"KELP FOREST",color:"#3edb9d",at:4},
+  {name:"DEEP OCEAN",color:"#5d8cff",at:7},
+  {name:"BIOLUMINESCENT CAVE",color:"#d15cff",at:10}
+];
+
+function currentZone(){
+  let z=zones[0];
+  for(const item of zones)if(level>=item.at)z=item;
+  return z;
+}
+
+function updateZone(){
+  const z=currentZone();
+  document.getElementById("zoneName").textContent=z.name;
+  document.getElementById("zone").style.color=z.color;
+}
+
+function updateUI(){
+  document.getElementById("score").textContent=score.toLocaleString();
+  document.getElementById("best").textContent=Math.max(best,score).toLocaleString();
+  document.getElementById("level").textContent=level;
+  document.getElementById("xpText").textContent=`${xp} / ${level*100} XP`;
+  document.getElementById("xp").style.width=clamp(xp/(level*100)*100,0,100)+"%";
+
+  const hearts=["🐟","🐟","🐟"].map((x,i)=>i<lives?x:"🦴");
+  document.getElementById("lives").textContent=hearts.join(" ");
+
+  const cd=fish.dashCooldown;
+  document.getElementById("dashFill").style.width=clamp(100-cd/3.2*100,0,100)+"%";
+  document.getElementById("dashText").textContent=cd>0?`${cd.toFixed(1)}s`:"SPACE / TAP";
+}
+
+function addScore(value){
+  const multiplier=1+Math.min(combo,10)*.2;
+  const gained=Math.round(value*multiplier);
+  score+=gained;
+  xp+=Math.ceil(gained*.55);
+  combo++;
+  comboTimer=2.8;
+
+  if(score>best){
+    best=score;
+    localStorage.setItem("fishFeverBest",best);
+  }
+
+  if(combo===3)announce("NICE!","Combo started");
+  if(combo===6)announce("FISH FEVER!","You're on fire!");
+  if(combo===10)announce("TREASURE MASTER!","Legendary combo!");
+  if(value>=100)announce("GOLDEN CATCH!","+100 treasure");
+
+  if(xp>=level*100){
+    xp-=level*100;
+    level++;
+    levelUp();
+  }
+
+  updateUI();
+}
+
+function levelUp(){
+  announce(`LEVEL ${level}`,"The ocean gets wilder...");
+  beep(500,.12,"triangle",.04);
+  setTimeout(()=>beep(700,.18,"triangle",.04),100);
+  for(let i=0;i<40;i++)particles.push(new Particle(fish.x,fish.y,"spark"));
+  updateZone();
+}
+
+function announce(title,sub){
+  const m=document.getElementById("message");
+  document.getElementById("messageTitle").textContent=title;
+  document.getElementById("messageSub").textContent=sub;
+  m.classList.add("show");
+  messageTimer=1.1;
+}
+
+/* ---------------------------
+   Spawning
+--------------------------- */
+
+function spawnCollectible(){
+  collectibles.push(new Collectible());
+}
+
+function spawnObstacle(){
+  if(obstacles.length<Math.min(3+level,9))
+    obstacles.push(new Obstacle());
+}
+
+/* ---------------------------
+   Collision
+--------------------------- */
+
+function checkCollisions(){
+  for(let i=collectibles.length-1;i>=0;i--){
+    const c=collectibles[i];
+    if(Math.hypot(fish.x-c.x,fish.y-c.y)<fish.radius+c.r+8){
+      addScore(c.value);
+      if(particlesEnabled)splash(c.x,c.y);
+      collectSound();
+      collectibles.splice(i,1);
+    }
+  }
+
+  if(fish.invulnerable<=0){
+    for(const o of obstacles){
+      if(Math.hypot(fish.x-o.x,fish.y-o.y)<fish.radius+o.r*.7){
+        fish.invulnerable=1.2;
+        lives--;
+        combo=0;
+        comboTimer=0;
+        hitSound();
+        splash(fish.x,fish.y);
+        announce("OUCH!","Watch out!");
+        if(lives<=0)endGame();
+        break;
+      }
+    }
+  }
+}
+
+/* ---------------------------
+   Main update
+--------------------------- */
+
+function update(dt){
+  time+=dt;
+
+  if(target.pulse>0)target.pulse=Math.max(0,target.pulse-dt*1.7);
+  target.speed*=Math.pow(.04,dt);
+
+  fish.update(dt);
+
+  spawnTimer-=dt;
+  obstacleTimer-=dt;
+
+  const spawnRate=Math.max(.22,.65-level*.025);
+  if(spawnTimer<=0){
+    spawnCollectible();
+    spawnTimer=spawnRate;
+  }
+
+  if(obstacleTimer<=0){
+    spawnObstacle();
+    obstacleTimer=Math.max(1.2,3.2-level*.15);
+  }
+
+  for(const c of collectibles)c.update(dt);
+  for(const o of obstacles)o.update(dt);
+
+  if(particlesEnabled){
+    for(let i=particles.length-1;i>=0;i--){
+      particles[i].update(dt);
+      if(particles[i].life>=particles[i].max)particles.splice(i,1);
+    }
+  }
+
+  checkCollisions();
+
+  if(comboTimer>0){
+    comboTimer-=dt;
+    if(comboTimer<=0)combo=0;
+  }
+
+  if(messageTimer>0){
+    messageTimer-=dt;
+    if(messageTimer<=0)document.getElementById("message").classList.remove("show");
+  }
+
+  updateUI();
+}
+
+/* ---------------------------
+   Rendering
+--------------------------- */
+
+function drawTarget(){
+  if(!target.active)return;
+
+  ctx.save();
+  ctx.translate(target.x,target.y);
+  const pulse=1+target.pulse*.35;
+
+  ctx.globalAlpha=.65;
+  ctx.strokeStyle="#91f8ff";
+  ctx.shadowColor="#00eaff";
+  ctx.shadowBlur=20;
+
+  ctx.beginPath();
+  ctx.arc(0,0,(10+target.pulse*18)*pulse,0,Math.PI*2);
+  ctx.stroke();
+
+  ctx.globalAlpha=.2;
+  ctx.beginPath();
+  ctx.arc(0,0,35+target.pulse*20,0,Math.PI*2);
+  ctx.stroke();
+
+  ctx.fillStyle="#dfffff";
+  ctx.shadowBlur=12;
+  ctx.beginPath();ctx.arc(0,0,3,0,Math.PI*2);ctx.fill();
+
+  ctx.restore();
+}
+
+function render(){
+  ctx.clearRect(0,0,W,H);
+
+  drawBackground();
+
+  /* collectibles behind fish */
+  for(const c of collectibles)c.draw();
+
+  for(const o of obstacles)o.draw();
+
+  if(particlesEnabled){
+    for(const p of particles)p.draw();
+  }
+
+  fish.draw();
+
+  drawTarget();
+
+  /* Combo indicator */
+  const comboEl=document.getElementById("combo");
+  if(combo>=2){
+    comboEl.textContent=`${combo>=10?"TREASURE MASTER":"FISH FEVER"} ×${combo}!`;
+    comboEl.classList.add("show");
+  }else comboEl.classList.remove("show");
+}
+
+/* ---------------------------
+   Game loop
+--------------------------- */
+
+function loop(now){
+  const dt=Math.min((now-last)/1000,.033);
+  last=now;
+
+  if(running&&!paused&&!gameOver)update(dt);
+  render();
+
+  requestAnimationFrame(loop);
+}
+
+/* ---------------------------
+   Game controls
+--------------------------- */
+
+function startGame(){
+  initAudio();
+  running=true;
+  paused=false;
+  gameOver=false;
+
+  score=0;
+  xp=0;
+  level=1;
+  combo=0;
+  comboTimer=0;
+  lives=3;
+
+  collectibles=[];
+  obstacles=[];
+  particles.length=0;
+
+  fish.x=W*.5;
+  fish.y=H*.55;
+  fish.vx=0;
+  fish.vy=0;
+  fish.angle=0;
+  fish.dash=0;
+  fish.dashCooldown=0;
+  fish.skin=skin;
+
+  target.x=W*.5;
+  target.y=H*.5;
+  target.active=true;
+
+  updateZone();
+  updateUI();
+
+  document.getElementById("overlay").classList.add("hidden");
+
+  for(let i=0;i<8;i++)spawnCollectible();
+  for(let i=0;i<2;i++)spawnObstacle();
+}
+
+function endGame(){
+  gameOver=true;
+  running=false;
+
+  setTimeout(()=>{
+    document.getElementById("overlay").classList.remove("hidden");
+    document.querySelector(".logo").innerHTML="GAME<br>OVER";
+    document.querySelector(".subtitle").innerHTML=
+      `You scored <b>${score.toLocaleString()}</b> points at Level ${level}.<br>
+       ${score>=best?"🏆 NEW HIGH SCORE!":"Can you beat your record?"}`;
+
+    document.getElementById("playBtn").textContent="🐠 SWIM AGAIN";
+    document.getElementById("menuBest").textContent=best;
+  },500);
+}
+
+function togglePause(){
+  if(!running)return;
+  paused=!paused;
+  document.getElementById("pauseBtn").textContent=paused?"▶":"Ⅱ";
+}
+
+document.getElementById("playBtn").onclick=startGame;
+document.getElementById("pauseBtn").onclick=togglePause;
+
+document.getElementById("dash").onclick=()=>fish.dashNow();
+
+addEventListener("keydown",e=>{
+  if(e.code==="Space"){
+    e.preventDefault();
+    fish.dashNow();
+  }
+  if(e.code==="Escape")togglePause();
+  if(e.key.toLowerCase()==="m"){
+    sound=!sound;
+    updateSoundUI();
+  }
+});
+
+function updateSoundUI(){
+  document.getElementById("soundBtn").textContent=sound?"♪":"×";
+  document.getElementById("soundToggle").classList.toggle("on",sound);
+}
+
+document.getElementById("soundBtn").onclick=()=>{
+  sound=!sound;updateSoundUI();
+  if(sound)initAudio();
+};
+
+document.getElementById("settingsBtn").onclick=()=>{
+  document.getElementById("settings").classList.toggle("open");
+};
+
+document.getElementById("soundToggle").onclick=()=>{
+  sound=!sound;updateSoundUI();
+};
+
+document.getElementById("particleToggle").onclick=()=>{
+  particlesEnabled=!particlesEnabled;
+  document.getElementById("particleToggle").classList.toggle("on",particlesEnabled);
+  if(!particlesEnabled)particles.length=0;
+};
+
+document.getElementById("nightToggle").onclick=()=>{
+  nightMode=!nightMode;
+  document.getElementById("nightToggle").classList.toggle("on",nightMode);
+};
+
+document.getElementById("skinSelect").onchange=e=>{
+  skin=e.target.value;
+  fish.skin=skin;
+  localStorage.setItem("fishSkin",skin);
+};
+
+/* ---------------------------
+   Initial title-screen fish
+--------------------------- */
+
+let titleFish={
+  x:-80,
+  y:H*.72,
+  speed:70
+};
+
+function titleAnimation(){
+  if(running)return;
+  titleFish.x+=titleFish.speed*.016;
+  if(titleFish.x>W+120)titleFish.x=-120;
+
+  /* The real fish is used for the title animation too */
+  fish.x=titleFish.x;
+  fish.y=titleFish.y+Math.sin(performance.now()*.0015)*20;
+  fish.angle=0;
+}
+
+/* Slight title movement without interfering with gameplay */
+setInterval(titleAnimation,16);
+
+/* Initial decoration */
+for(let i=0;i<5;i++){
+  const c=new Collectible();
+  c.x=rand(100,W-100);
+  c.y=rand(100,H-120);
+  collectibles.push(c);
+}
+
+/* Reset title collectibles when game begins */
+requestAnimationFrame(loop);
+
+/* Prevent context menu during play */
+canvas.addEventListener("contextmenu",e=>e.preventDefault());
+
+/* Make sure audio starts after first interaction */
+addEventListener("pointerdown",()=>{if(sound)initAudio()},{once:true});
+
+/* Keep title screen looking alive */
+setInterval(()=>{
+  if(!running&&!gameOver){
+    for(let i=0;i<2;i++){
+      particles.push(new Particle(rand(0,W),H+5,"bubble"));
+    }
+  }
+},350);
+</script>
+</body>
+</html>
